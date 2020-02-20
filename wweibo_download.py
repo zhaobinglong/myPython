@@ -1,10 +1,11 @@
+## 爬取微博数据
+
 import urllib.request
 import urllib.error
 import time
 import os
 import re
 import json
-
 
 def url_open(url):
 	req = urllib.request.Request(url)
