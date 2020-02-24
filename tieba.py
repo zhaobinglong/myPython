@@ -36,9 +36,12 @@ def pageDetail(id):
         作用：根据帖子的id，拼接出来完整的url，读取帖子详情
         html：id
     """
-
+    
     url = "http://tieba.baidu.com/p/" + id
     html = loadPage(url, url).decode('utf-8')
+    print(url)
+    soup = BeautifulSoup(html,'lxml')
+    # print(soup.prettify())
     
     # 读取帖子的标题 
     reg = '<h1 class="core_title_txt  " title="(.*?)"'
@@ -58,8 +61,9 @@ def pageDetail(id):
     nickname = soup.find_all("a", class_="p_author_name j_user_card",limit=1)[0].get_text()
     
     # 提取用户头像
-    regAvatar = '<img username="" class="" src="(.*?)"'
-    resAvatar = re.findall(regAvatar, html)
+    regAvatar = '<img username="(.*?)" class="" src="(.*?)"'
+    resAvatar = re.findall(regAvatar, html)[0]
+    # print(resAvatar)
     
     # 提取用户id
     regUserId = 'user_id":(.*?),'
@@ -71,8 +75,8 @@ def pageDetail(id):
     # print('头像:' + resAvatar[0])
     # print('标题:' + res)
     # print('内容:' + re.sub('<img (.*?)>', "", resContent).strip())
-    print(resImg)
-    print(dumps(resImg))
+    # print(resImg)
+    # print(dumps(resImg))
     # print(li)
     # for each in li:
     #     print(each)
@@ -80,8 +84,8 @@ def pageDetail(id):
     #     print(each.slect('a'))
     userInfo = {
       'openid': 'tieba-' + resUserId,
-      'nickname': nickname,
-      'avatar': resAvatar[0]
+      'nickName': nickname,
+      'avatarUrl': resAvatar[1]
     }
     content = {
         'title': res,
@@ -103,27 +107,44 @@ def saveInfo(info, content):
     # print(content)
     mysql = db.Mysql()
     saveContent(mysql, content)
-    # mysql.query(sql)
+    saveUser(mysql, info)
     mysql.end()
 
+# 保存帖子信息
 def saveContent(mysql,cont):
     sql = 'select id from ershou where belong="'+cont['belong']+'"'
     res = mysql.query(sql)
+    print(res)
     if (len(res) > 0):
         print('帖子已经被插入数据库，不再插入')
     else :
         sql = '''insert into 
-        ershou(openid,title,cont,imgs,college,createtime,belong) 
-        value('%s','%s','%s','%s','%s','%s','%s')
+        ershou(openid,title,cont,imgs,college,createtime,updatetime,belong) 
+        value('%s','%s','%s','%s','%s','%s','%s','%s')
         '''
-        sql = sql%(cont['openid'],cont['title'],cont['cont'],cont['imgs'],cont['college'],cont['createtime'],cont['belong'])
+        sql = sql%(cont['openid'],cont['title'],cont['cont'],cont['imgs'],cont['college'],cont['createtime'],cont['createtime'],cont['belong'])
+        # print(sql)
+        res = mysql.query(sql)
+        print(res)
+
+# 保存用户信息到数据库
+def saveUser(mysql, info):
+    sql = 'select id from user where openid="%s"'%(info['openid'])
+    res = mysql.query(sql)
+    if (len(res) > 0):
+        print('用户已经被插入数据库，不再插入')
+    else :
+        sql = '''insert into 
+        user(openid,nickName,avatarUrl) 
+        value('%s','%s','%s')
+        '''%(info['openid'],info['nickName'],info['avatarUrl'])
         print(sql)
         res = mysql.query(sql)
         print(res)
 
 def writePage(html, filename):
     """
-        作用：将html内容写入到本地
+        作用：获取首页的所有的帖子 id
         html：服务器相应文件内容
     """
     # reg = '<div class="ti_title">([\s\S]*?)</div>'
@@ -138,14 +159,17 @@ def writePage(html, filename):
         # print(each[1])
         if(each[1].find('吧规') != -1 ):
             print("===============")
+        elif(each[1].find('集中') != -1):
+            print("===============")
         else:
             arr.append(each)
     # print(arr)
         # get_info(each
     # pageDetail('6252332220')
     # tie_nums = re.findall('<a href="/p/(.*?)" title="', html, re.S)
-    for num in arr:
-        print(num)
+    # for num in arr:
+    #     print(num)
+    pageDetail(arr[0][0])
 
 def tiebaSpider(url, beginPage, endPage):
     """
@@ -159,10 +183,10 @@ def tiebaSpider(url, beginPage, endPage):
         filename = "第" + str(page) + "页.html"
         fullurl = url + "&pn=" + str(pn)
         # print (fullurl)
-        # html = loadPage(fullurl, filename).decode('utf-8')
+        html = loadPage(fullurl, filename).decode('utf-8')
         # print(html)
-        # writePage(html, filename)
-    pageDetail('6183754479')
+        writePage(html, filename)
+    # pageDetail('6183754479')
     print ("谢谢使用")
  
 if __name__ == "__main__":

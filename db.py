@@ -1,29 +1,42 @@
 import pymysql
+import configparser
 
 class Mysql:
     def __init__(self):
+        cf = configparser.ConfigParser()
+        cf.read("config.ini")
         self.content = pymysql.Connect(
-            host='154.8.226.223',  # mysql的主机ip
-            port=3306,  # 端口
-            user='root',  # 用户名
-            passwd='3ZbvwYRUFc',  # 数据库密码
-            db='old_wang',  # 数据库名
-            charset='utf8',  # 字符集
+            host=cf['db']['host'],  # mysql的主机ip
+            port=int(cf['db']['port']),  # 端口
+            user=cf['db']['user'],  # 用户名
+            passwd=cf['db']['passwd'],  # 数据库密码
+            db=cf['db']['db'],  # 数据库名
+            charset=cf['db']['charset'],  # 字符集
         )
         self.cursor = self.content.cursor()
 
-    def query(self):
-        sql = "select * from user"
-        self.cursor.execute(sql)
-        for row in self.cursor.fetchall():
-            print(row)
+    def query(self,sql):
+        # sql = "select * from user"
+        # print(sql)
+        try:
+            self.cursor.execute(sql)
+            return self.cursor.fetchall()
+        except:
+            print ("Error: unable to fetch data")
+            return 
+        # return res
+        # for row in self.cursor.fetchall():
+        #     print(row)
+        # print('db end')
+        
 
     def end(self):
+        self.content.commit()
         self.cursor.close()
         self.content.close()
 
 
-if __name__ == '__main__':
-    mysql = Mysql()
-    mysql.query()
-    mysql.end()
+# if __name__ == '__main__':
+#     mysql = Mysql()
+#     mysql.query()
+#     mysql.end()
