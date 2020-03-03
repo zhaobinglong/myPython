@@ -13,7 +13,7 @@ class Mysql:
             db=cf['db']['db'],  # 数据库名
             charset=cf['db']['charset'],  # 字符集
         )
-        self.cursor = self.content.cursor()
+        self.cursor = self.content.cursor(pymysql.cursors.DictCursor)
 
     def query(self,sql):
         # sql = "select * from user"
