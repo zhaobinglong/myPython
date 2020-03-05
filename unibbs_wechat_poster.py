@@ -49,7 +49,7 @@ def mask(img):
 # 合并标题部分
 def mergeTitle(summary):
 	bk = Image.open("bk-middle.png")
-	n = 30             # 每一行字的最大数量
+	n = 28            # 每一行字的最大数量
 	summary_line = 42  # 每行文字的高度
 	w = bk.size[0]
 	h = (len(summary) // n + 1 ) * summary_line
@@ -58,7 +58,7 @@ def mergeTitle(summary):
 
 	font_type = './SourceHanSansCN-Normal.ttf' # 字体文件
 	font = ImageFont.truetype(font_type, 36) # 字体名字和大小
-	summary_x = 60     # 文字左边距
+	summary_x = 100     # 文字左边距
 	summary_y = 0    # 文字开始张贴的高度
 	
 	summary_list = [summary[i:i + n] for i in range(0, len(summary), n)]
@@ -68,22 +68,10 @@ def mergeTitle(summary):
 	return bk
 
 # 合并二维码部分
-
-
-if __name__ == "__main__":
-	id = '1797'
-	summary = '习惯在一个任务开始之前，先给自己设立一个看起来不太可能达到的完美标准，并因为这个标准而迟迟无法动手，那你可能也是一个完美主义者'
-	
-	bk = Image.open("bk.png")
-	top_image = Image.open("bk-top.png")
-
-	# 二维码
+def mergeQrcode(id):
+	bk = Image.open("bk-bottom.png")
 	qrcodeBytes = getQrcode(id) # 二维码的二进制文件
 	flag = Image.open(BytesIO(qrcodeBytes))
-
-	title_image = mergeTitle(summary)
-	# response = req.get("https://static.examlab.cn/img/15831632081148511.jpg")
-
 
 	# 计算缩放比例
 	ratio = bk.width/flag.width/4 
@@ -91,17 +79,55 @@ if __name__ == "__main__":
 	flag = flag.resize(size,Image.ANTIALIAS)#缩放国旗图片
 
 	# 蒙版
-	mask = mask(flag)
+	mask_draw = mask(flag)
 
 	# 计算二维码显示的坐标
 	x = (bk.width-flag.width)/2
 	y = bk.height-flag.height - 130
 
 	box = (int(x),y, int(x) + flag.width, y + flag.height )
-	print(top_image.width)
-	title_image_start_x = top_image.height
-	# bk.paste(flag, box, mask)
+	bk.paste(flag, box, mask_draw)
+	return bk
+
+# 合并帖子中的图片,帖子中可能有多张图片
+def mergeImages():
+	bk = Image.open("bk-middle.png")
+	pics = ['https://static.examlab.cn/img/15831632081148511.jpg']
+	response = req.get(pics[0])
+	pic1= Image.open(BytesIO(response.content))
+	
+	# 计算pic1真实尺寸
+	ratio = bk.width/pic1.width
+	w = int(pic1.width * ratio) - 200
+	h = int(pic1.height * ratio) 
+	pic1 = pic1.resize((w, h),Image.ANTIALIAS)
+	
+	# return pic1
+	bk = bk.resize((bk.width, pic1.height + 20),Image.ANTIALIAS)
+	box = (100,0)
+	print(box)
+	bk.paste(pic1, box)
+	return bk
+
+if __name__ == "__main__":
+	id = '1797'
+	summary = '习惯在一个任务开始之前，先给自己设立一个看起来不太可能达到的完美标准，并因为这个标准而迟迟无法动手，那你可能也是一个完美主义者'
+	
+	top_image = Image.open("bk-top.png")
+	title_image = mergeTitle(summary)
+
+	mergeImages = mergeImages()
+
+	qrcode_img = mergeQrcode(id)
+	
+	# 新建一个背景图，承载所有的模块
+	height = top_image.height + title_image.height + mergeImages.height + qrcode_img.height
+	bk = Image.new(mode="RGB", size=(top_image.width, height), color="white")
+
 	bk.paste(top_image,(0,0))
 	bk.paste(title_image,(0,top_image.height))
+	bk.paste(mergeImages,(0,top_image.height + title_image.height))
+	bk.paste(qrcode_img,(0, top_image.height + title_image.height + mergeImages.height))
+	
 	bk.save("head_flag.png","png")#合并图片并保存
 
