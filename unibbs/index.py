@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 # 微信小程序海报生成脚本
 # 1. 合并三张图片为一排
-
+from flask import Flask, request
 from PIL import Image, ImageDraw,ImageFont
 import requests as req
 from io import BytesIO
+
+app = Flask(__name__)
+
 
 # import db
 # import json
@@ -27,7 +30,7 @@ def getToken():
 # 通过帖子的id 拿到小程序二维码
 def getQrcode(id):
 	url = 'https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=' + getToken()
-	data = {"scene": id,"path":'pages/date/detail/index'}
+	data = {"scene": id,"page":'pages/date/detail/index'}
 
 	ret = req.post(url,json=data)
 
@@ -90,9 +93,8 @@ def mergeQrcode(id):
 	return bk
 
 # 合并帖子中的图片,帖子中可能有多张图片
-def mergeImages():
+def mergeImages(pics):
 	bk = Image.open("bk-middle.png")
-	pics = ['https://static.examlab.cn/img/15831632081148511.jpg']
 	response = req.get(pics[0])
 	pic1= Image.open(BytesIO(response.content))
 	
@@ -109,25 +111,42 @@ def mergeImages():
 	bk.paste(pic1, box)
 	return bk
 
-if __name__ == "__main__":
-	id = '1797'
-	summary = '习惯在一个任务开始之前，先给自己设立一个看起来不太可能达到的完美标准，并因为这个标准而迟迟无法动手，那你可能也是一个完美主义者'
-	
+@app.route('/')
+def hello_world():
+	return 'welcome unibbs'
+
+
+@app.route('/wechat/share',methods=['POST'])
+def share():
+	formData = request.form
+	# 帖子信息在这里
+	id = formData['id']
+	summary = formData['cont']
+	pics = formData['pics']
+
 	top_image = Image.open("bk-top.png")
 	title_image = mergeTitle(summary)
 
-	mergeImages = mergeImages()
+	merge_Images = mergeImages(pics)
 
 	qrcode_img = mergeQrcode(id)
 	
 	# 新建一个背景图，承载所有的模块
-	height = top_image.height + title_image.height + mergeImages.height + qrcode_img.height
+	height = top_image.height + title_image.height + merge_Images.height + qrcode_img.height
 	bk = Image.new(mode="RGB", size=(top_image.width, height), color="white")
 
 	bk.paste(top_image,(0,0))
 	bk.paste(title_image,(0,top_image.height))
-	bk.paste(mergeImages,(0,top_image.height + title_image.height))
-	bk.paste(qrcode_img,(0, top_image.height + title_image.height + mergeImages.height))
+	bk.paste(merge_Images,(0,top_image.height + title_image.height))
+	bk.paste(qrcode_img,(0, top_image.height + title_image.height + merge_Images.height))
 	
 	bk.save("head_flag.png","png")#合并图片并保存
+	return "head_flag.png"
+
+
+
+if __name__ == "__main__":
+	app.run(debug=True)
+	
+ 
 
